@@ -23,13 +23,12 @@ import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.util.Pair;
 import com.maddyhome.idea.vim.VimPlugin;
-import com.maddyhome.idea.vim.command.CommandState;
-import com.maddyhome.idea.vim.command.MappingMode;
-import com.maddyhome.idea.vim.command.SelectionType;
+import com.maddyhome.idea.vim.command.*;
 import com.maddyhome.idea.vim.common.Mark;
 import com.maddyhome.idea.vim.common.TextRange;
 import com.maddyhome.idea.vim.extension.VimExtensionHandler;
 import com.maddyhome.idea.vim.extension.VimNonDisposableExtension;
+import com.maddyhome.idea.vim.extension.repeat.VimRepeat;
 import com.maddyhome.idea.vim.group.ChangeGroup;
 import com.maddyhome.idea.vim.helper.EditorHelper;
 import com.maddyhome.idea.vim.key.OperatorFunction;
@@ -39,6 +38,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -259,6 +259,8 @@ public class VimSurroundExtension extends VimNonDisposableExtension {
   private static class Operator implements OperatorFunction {
     @Override
     public boolean apply(@NotNull Editor editor, @NotNull DataContext context, @NotNull SelectionType selectionType) {
+      List<KeyStroke> operatorMotion = getMotionKeys(editor);
+
       final char c = getChar(editor);
       if (c == 0) {
         return true;
@@ -279,7 +281,25 @@ public class VimSurroundExtension extends VimNonDisposableExtension {
 
       // Jump back to start
       executeNormal(parseKeys("`["), editor);
+
+      List<KeyStroke> keys = parseKeys("<Plug>YSurround");
+      keys.addAll(operatorMotion);
+      keys.addAll(parseKeys(String.valueOf(c)));
+      VimRepeat.set(editor, keys);
       return true;
+    }
+
+    private List<KeyStroke> getMotionKeys(Editor editor) {
+      Command command = CommandState.getInstance(editor).getCommand();
+      if (command == null) return Collections.emptyList();
+
+      Argument arg = command.getArgument();
+      if (arg == null) return Collections.emptyList();
+
+      Command motion = arg.getMotion();
+      if (motion == null) return Collections.emptyList();
+
+      return motion.getKeys();
     }
 
     @Nullable
