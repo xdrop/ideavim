@@ -38,7 +38,6 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -259,7 +258,7 @@ public class VimSurroundExtension extends VimNonDisposableExtension {
   private static class Operator implements OperatorFunction {
     @Override
     public boolean apply(@NotNull Editor editor, @NotNull DataContext context, @NotNull SelectionType selectionType) {
-      List<KeyStroke> operatorMotion = getMotionKeys(editor);
+      final List<KeyStroke> operatorMotion = getMotionKeys(editor);
 
       final char c = getChar(editor);
       if (c == 0) {
@@ -287,19 +286,6 @@ public class VimSurroundExtension extends VimNonDisposableExtension {
       keys.addAll(parseKeys(String.valueOf(c)));
       VimRepeat.set(editor, keys);
       return true;
-    }
-
-    private List<KeyStroke> getMotionKeys(Editor editor) {
-      Command command = CommandState.getInstance(editor).getCommand();
-      if (command == null) return Collections.emptyList();
-
-      Argument arg = command.getArgument();
-      if (arg == null) return Collections.emptyList();
-
-      Command motion = arg.getMotion();
-      if (motion == null) return Collections.emptyList();
-
-      return motion.getKeys();
     }
 
     @Nullable

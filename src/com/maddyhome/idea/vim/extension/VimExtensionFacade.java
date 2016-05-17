@@ -23,6 +23,9 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.util.Ref;
 import com.intellij.util.Processor;
 import com.maddyhome.idea.vim.VimPlugin;
+import com.maddyhome.idea.vim.command.Argument;
+import com.maddyhome.idea.vim.command.Command;
+import com.maddyhome.idea.vim.command.CommandState;
 import com.maddyhome.idea.vim.command.MappingMode;
 import com.maddyhome.idea.vim.common.Register;
 import com.maddyhome.idea.vim.helper.EditorDataContext;
@@ -175,5 +178,18 @@ public class VimExtensionFacade {
    */
   public static void setRegister(char register, @Nullable List<KeyStroke> keys) {
     VimPlugin.getRegister().setKeys(register, keys != null ? keys : Collections.<KeyStroke>emptyList());
+  }
+
+  public static List<KeyStroke> getMotionKeys(Editor editor) {
+    Command command = CommandState.getInstance(editor).getCommand();
+    if (command == null) return Collections.emptyList();
+
+    Argument arg = command.getArgument();
+    if (arg == null) return Collections.emptyList();
+
+    Command motion = arg.getMotion();
+    if (motion == null) return Collections.emptyList();
+
+    return motion.getKeys();
   }
 }
