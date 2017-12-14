@@ -18,6 +18,18 @@ public final class ModalEntry {
    * Activates modal entry mode, passing all received key strokes to the processor until it returns false.
    */
   public static void activate(@NotNull final Processor<KeyStroke> processor) {
+
+    while (true) {
+      KeyStroke enqueued = InputQueue.dequeue();
+      if (enqueued == null) {
+        break;
+      }
+      else if (!processor.process(enqueued)) {
+        // done processing
+        return;
+      }
+    }
+
     final SecondaryLoopCompat loop = SecondaryLoopCompat.newInstance();
 
     KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() {
