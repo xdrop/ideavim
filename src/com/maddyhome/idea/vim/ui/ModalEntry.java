@@ -30,7 +30,8 @@ public final class ModalEntry {
       }
     }
 
-    final SecondaryLoopCompat loop = SecondaryLoopCompat.newInstance();
+    final EventQueue systemQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
+    final SecondaryLoop loop = systemQueue.createSecondaryLoop();
 
     KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() {
       @Override
