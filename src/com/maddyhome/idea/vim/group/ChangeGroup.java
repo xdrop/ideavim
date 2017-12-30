@@ -451,7 +451,7 @@ public class ChangeGroup {
     if (repeatLines > 0) {
       int vline = editor.getCaretModel().getVisualPosition().line;
       int lline = editor.getCaretModel().getLogicalPosition().line;
-      cpos = editor.logicalPositionToOffset(new LogicalPosition(vline, repeatColumn));
+      cpos = editor.logicalPositionToOffset(new LogicalPosition(lline, repeatColumn));
       for (int i = 0; i < repeatLines; i++) {
         if (repeatAppend && repeatColumn < MotionGroup.LAST_COLUMN &&
             EditorHelper.getVisualLineLength(editor, vline + i) < repeatColumn) {
@@ -1116,7 +1116,7 @@ public class ChangeGroup {
                                    CharacterHelper.charType(chars.charAt(offset + 1), bigWord) != charType;
       final ImmutableSet<String> wordMotions = ImmutableSet.of(
         "VimMotionWordRight", "VimMotionBigWordRight", "VimMotionCamelRight");
-      if (wordMotions.contains(id) && lastWordChar) {
+      if (wordMotions.contains(id) && lastWordChar && motion.getCount() == 1) {
         final boolean res = deleteCharacter(editor, 1, true);
         if (res) {
           insertBeforeCursor(editor, context);
@@ -1175,8 +1175,8 @@ public class ChangeGroup {
   }
 
   public boolean blockInsert(@NotNull Editor editor, @NotNull DataContext context, @NotNull TextRange range, boolean append) {
+    int lines = getLinesCountInVisualBlock(editor, range);
     LogicalPosition start = editor.offsetToLogicalPosition(range.getStartOffset());
-    int lines = range.size();
     int line = start.line;
     int col = start.column;
     if (!range.isMultiple()) {
@@ -1225,7 +1225,7 @@ public class ChangeGroup {
     int col = 0;
     int lines = 0;
     if (type == SelectionType.BLOCK_WISE) {
-      lines = range.size();
+      lines = getLinesCountInVisualBlock(editor, range);
       col = editor.offsetToLogicalPosition(range.getStartOffset()).column;
       if (EditorData.getLastColumn(editor) == MotionGroup.LAST_COLUMN) {
         col = MotionGroup.LAST_COLUMN;
@@ -1251,6 +1251,23 @@ public class ChangeGroup {
     }
 
     return res;
+  }
+
+  /**
+   * Counts number of lines in the visual block.
+   * <p>
+   * The result includes empty and short lines which does not have explicit start position (caret).
+   *
+   * @param editor  The editor the block was selected in
+   * @param range   The range corresponding to the selected block
+   * @return total number of lines
+   */
+  private static int getLinesCountInVisualBlock(@NotNull Editor editor, @NotNull TextRange range) {
+    final int[] startOffsets = range.getStartOffsets();
+    if (startOffsets.length == 0) return 0;
+    final LogicalPosition firstStart = editor.offsetToLogicalPosition(startOffsets[0]);
+    final LogicalPosition lastStart = editor.offsetToLogicalPosition(startOffsets[range.size() - 1]);
+    return lastStart.line - firstStart.line + 1;
   }
 
   /**
