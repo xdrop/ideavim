@@ -294,6 +294,10 @@ public class VimSurroundExtension extends VimNonDisposableExtension {
 
         // Jump back to start
         executeNormal(parseKeys("`["), editor);
+        List<KeyStroke> keys = parseKeys("<Plug>YSurround");
+        keys.addAll(operatorMotion);
+        keys.addAll(parseKeys(String.valueOf(c)));
+        VimRepeat.set(editor, keys);
       });
 
       return true;
