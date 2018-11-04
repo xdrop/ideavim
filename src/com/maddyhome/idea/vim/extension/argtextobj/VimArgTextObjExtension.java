@@ -2,6 +2,7 @@ package com.maddyhome.idea.vim.extension.argtextobj;
 
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.actionSystem.EditorActionHandler;
@@ -40,6 +41,12 @@ public class VimArgTextObjExtension extends VimNonDisposableExtension {
 
       private Handler(boolean isInner) {
         this.isInner = isInner;
+      }
+
+      @Nullable
+      @Override
+      public TextRange getRange(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context, int count, int rawCount, @Nullable Argument argument) {
+        return getRange(editor, context, count, rawCount, argument);
       }
 
       public TextRange getRange(@NotNull Editor editor,
