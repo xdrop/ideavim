@@ -19,12 +19,15 @@
 package com.maddyhome.idea.vim.ex.handler;
 
 import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Editor;
 import com.maddyhome.idea.vim.VimPlugin;
 import com.maddyhome.idea.vim.command.Command;
 import com.maddyhome.idea.vim.ex.CommandHandler;
 import com.maddyhome.idea.vim.ex.ExCommand;
+import com.maddyhome.idea.vim.ex.ExException;
 import com.maddyhome.idea.vim.group.MotionGroup;
+import com.maddyhome.idea.vim.handler.CaretOrder;
 import com.maddyhome.idea.vim.helper.EditorHelper;
 import org.jetbrains.annotations.NotNull;
 
@@ -37,34 +40,29 @@ public class GotoLineHandler extends CommandHandler {
    * Create the handler
    */
   public GotoLineHandler() {
-    super(RANGE_REQUIRED | ARGUMENT_OPTIONAL, Command.FLAG_MOT_EXCLUSIVE);
+    super(RANGE_REQUIRED | ARGUMENT_OPTIONAL, Command.FLAG_MOT_EXCLUSIVE, true, CaretOrder.DECREASING_OFFSET);
   }
 
   /**
    * Moves the cursor to the line entered by the user
    *
-   * @param editor  The editor to perform the action in.
+   * @param editor  The editor to perform the action in
+   * @param caret   The caret to perform the action on
    * @param context The data context
    * @param cmd     The complete Ex command including range, command, and arguments
    * @return True if able to perform the command, false if not
    */
-  public boolean execute(@NotNull Editor editor, @NotNull DataContext context, @NotNull ExCommand cmd) {
-    int count = cmd.getLine(editor, context);
+  @Override
+  public boolean execute(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context,
+                         @NotNull ExCommand cmd) throws ExException {
+    final int line = Math.min(cmd.getLine(editor, caret, context), EditorHelper.getLineCount(editor) - 1);
 
-    int max = EditorHelper.getLineCount(editor);
-    if (count >= max) {
-      count = max - 1;
-    }
-
-    if (count >= 0) {
-      MotionGroup.moveCaret(editor, VimPlugin.getMotion().moveCaretToLineStartSkipLeading(editor, count));
-
+    if (line >= 0) {
+      MotionGroup.moveCaret(editor, caret, VimPlugin.getMotion().moveCaretToLineStartSkipLeading(editor, line));
       return true;
     }
-    else {
-      MotionGroup.moveCaret(editor, 0);
-    }
 
+    MotionGroup.moveCaret(editor, caret, 0);
     return false;
   }
 }

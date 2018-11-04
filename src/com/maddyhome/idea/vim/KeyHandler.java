@@ -24,9 +24,10 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.command.CommandProcessor;
-import com.intellij.openapi.editor.actionSystem.ActionPlan;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.actionSystem.ActionPlan;
 import com.intellij.openapi.editor.actionSystem.TypedActionHandler;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.impl.source.tree.injected.InjectedLanguageUtil;
@@ -36,15 +37,16 @@ import com.maddyhome.idea.vim.command.CommandState;
 import com.maddyhome.idea.vim.command.MappingMode;
 import com.maddyhome.idea.vim.extension.VimExtensionHandler;
 import com.maddyhome.idea.vim.group.RegisterGroup;
-import com.maddyhome.idea.vim.helper.*;
+import com.maddyhome.idea.vim.helper.DigraphSequence;
+import com.maddyhome.idea.vim.helper.EditorDataContext;
+import com.maddyhome.idea.vim.helper.RunnableHelper;
+import com.maddyhome.idea.vim.helper.StringHelper;
 import com.maddyhome.idea.vim.key.*;
 import com.maddyhome.idea.vim.option.Options;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -262,15 +264,15 @@ public class KeyHandler {
     if (mapping.isPrefix(fromKeys)) {
       mappingKeys.add(key);
       if (!application.isUnitTestMode() && Options.getInstance().isSet(Options.TIMEOUT)) {
-        commandState.startMappingTimer(new ActionListener() {
-          @Override
-          public void actionPerformed(ActionEvent actionEvent) {
-            mappingKeys.clear();
-            for (KeyStroke keyStroke : fromKeys) {
-              handleKey(editor, keyStroke, new EditorDataContext(editor), false);
-            }
+        commandState.startMappingTimer(actionEvent -> application.invokeLater(() -> {
+          mappingKeys.clear();
+          if (editor.isDisposed()) {
+            return;
           }
-        });
+          for (KeyStroke keyStroke : fromKeys) {
+            handleKey(editor, keyStroke, new EditorDataContext(editor), false);
+          }
+        }, ModalityState.stateForComponent(editor.getComponent())));
       }
       return true;
     }
@@ -295,12 +297,11 @@ public class KeyHandler {
             }
           }
           else if (extensionHandler != null) {
-            RunnableHelper.runWriteCommand(editor.getProject(), new Runnable() {
-              @Override
-              public void run() {
-                extensionHandler.execute(editor, context);
-              }
-            }, "Vim " + extensionHandler.getClass().getSimpleName(), null);
+            final CommandProcessor processor = CommandProcessor.getInstance();
+            processor.executeCommand(editor.getProject(),
+                                     () -> extensionHandler.execute(editor, context),
+                                     "Vim " + extensionHandler.getClass().getSimpleName(),
+                                     null);
           }
 
           // NB: mappingInfo MUST be non-null here, so if equal
@@ -488,22 +489,24 @@ public class KeyHandler {
     lastWasBS = ((cmd.getFlags() & Command.FLAG_IS_BACKSPACE) != 0);
 
     Project project = editor.getProject();
-    if (cmd.getType().isRead() || project == null || EditorHelper.canEdit(project, editor)) {
-      if (ApplicationManager.getApplication().isDispatchThread()) {
-        Runnable action = new ActionRunner(editor, context, cmd, key);
-        String name = cmd.getAction().getTemplatePresentation().getText();
-        name = name != null ? "Vim " + name : "";
-        if (cmd.getType().isWrite()) {
-          RunnableHelper.runWriteCommand(project, action, name, action);
-        }
-        else {
-          RunnableHelper.runReadCommand(project, action, name, action);
-        }
-      }
-    }
-    else {
+    final Command.Type type = cmd.getType();
+    if (type.isWrite() && !editor.getDocument().isWritable()) {
       VimPlugin.indicateError();
       reset(editor);
+    }
+    if (ApplicationManager.getApplication().isDispatchThread()) {
+      Runnable action = new ActionRunner(editor, context, cmd, key);
+      String name = cmd.getAction().getTemplatePresentation().getText();
+      name = name != null ? "Vim " + name : "";
+      if (type.isWrite()) {
+        RunnableHelper.runWriteCommand(project, action, name, action);
+      }
+      else if (type.isRead()) {
+        RunnableHelper.runReadCommand(project, action, name, action);
+      }
+      else {
+        CommandProcessor.getInstance().executeCommand(project, action, name, action);
+      }
     }
   }
 

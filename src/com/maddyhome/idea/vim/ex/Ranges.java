@@ -19,6 +19,7 @@
 package com.maddyhome.idea.vim.ex;
 
 import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Editor;
 import com.maddyhome.idea.vim.VimPlugin;
 import com.maddyhome.idea.vim.common.TextRange;
@@ -39,7 +40,7 @@ public class Ranges {
    * Create the empty range list
    */
   public Ranges() {
-    ranges = new ArrayList<Range>();
+    ranges = new ArrayList<>();
   }
 
   /**
@@ -83,6 +84,11 @@ public class Ranges {
     return endLine;
   }
 
+  public int getLine(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context) {
+    processRange(editor, caret, context);
+    return endLine;
+  }
+
   /**
    * Gets the start line number the range represents
    *
@@ -93,6 +99,11 @@ public class Ranges {
   public int getFirstLine(@NotNull Editor editor, DataContext context) {
     processRange(editor, context);
 
+    return startLine;
+  }
+
+  public int getFirstLine(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context) {
+    processRange(editor, caret, context);
     return startLine;
   }
 
@@ -112,6 +123,11 @@ public class Ranges {
     else {
       return count;
     }
+  }
+
+  public int getCount(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context, int count) {
+    if (count == -1) return getLine(editor, caret, context);
+    return count;
   }
 
   /**
@@ -140,6 +156,12 @@ public class Ranges {
     return new LineRange(start, end);
   }
 
+  public LineRange getLineRange(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context, int count) {
+    processRange(editor, caret, context);
+    if (count == -1) return new LineRange(startLine, endLine);
+    return new LineRange(endLine, endLine + count - 1);
+  }
+
   /**
    * Gets the text range represented by this range. If a count is given, the range is the range end line through
    * count-1 lines. If no count is given (-1), the range is the range given by the user. The text range is based
@@ -155,6 +177,15 @@ public class Ranges {
     LineRange lr = getLineRange(editor, context, count);
     int start = EditorHelper.getLineStartOffset(editor, lr.getStartLine());
     int end = EditorHelper.getLineEndOffset(editor, lr.getEndLine(), true) + 1;
+
+    return new TextRange(start, Math.min(end, EditorHelper.getFileSize(editor)));
+  }
+
+  public TextRange getTextRange(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context, int count) {
+    final LineRange lineRange = getLineRange(editor, caret, context, count);
+
+    final int start = EditorHelper.getLineStartOffset(editor, lineRange.getStartLine());
+    final int end = EditorHelper.getLineEndOffset(editor, lineRange.getEndLine(), true) + 1;
 
     return new TextRange(start, Math.min(end, EditorHelper.getFileSize(editor)));
   }
@@ -210,7 +241,8 @@ public class Ranges {
       startLine = endLine;
       endLine = range.getLine(editor, context, lastZero);
       if (range.isMove()) {
-        MotionGroup.moveCaret(editor, VimPlugin.getMotion().moveCaretToLine(editor, endLine));
+        MotionGroup.moveCaret(editor, editor.getCaretModel().getPrimaryCaret(),
+                              VimPlugin.getMotion().moveCaretToLine(editor, endLine));
       }
       // Did that last range represent the start of the file?
       lastZero = (endLine < 0);
@@ -225,6 +257,25 @@ public class Ranges {
     done = true;
   }
 
+  private void processRange(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context) {
+    startLine = defaultLine == -1 ? caret.getLogicalPosition().line : defaultLine;
+    endLine = startLine;
+    boolean lastZero = false;
+    for (Range range : ranges) {
+      startLine = endLine;
+      endLine = range.getLine(editor, caret, context, lastZero);
+
+      if (range.isMove()) MotionGroup.moveCaret(editor, caret, VimPlugin.getMotion().moveCaretToLine(editor, endLine));
+
+      lastZero = endLine < 0;
+      ++count;
+    }
+
+    if (count == 1) startLine = endLine;
+
+    count = 0;
+  }
+
   @NotNull
   public String toString() {
 
@@ -236,5 +287,6 @@ public class Ranges {
   private int count = 0;
   private int defaultLine = -1;
   private boolean done = false;
-  @NotNull private final List<Range> ranges;
+  @NotNull
+  private final List<Range> ranges;
 }

@@ -21,7 +21,6 @@ package com.maddyhome.idea.vim.action.change.insert;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.editor.Editor;
-import com.intellij.psi.impl.source.tree.injected.InjectedLanguageUtil;
 import com.maddyhome.idea.vim.VimPlugin;
 import com.maddyhome.idea.vim.action.VimCommandAction;
 import com.maddyhome.idea.vim.command.Command;
@@ -36,15 +35,16 @@ import java.util.Set;
 public class InsertExitModeAction extends VimCommandAction {
   private static final String ACTION_ID = "VimInsertExitMode";
 
-  public InsertExitModeAction() {
+  protected InsertExitModeAction() {
     super(new EditorActionHandlerBase() {
-      public boolean execute(@NotNull Editor editor, @NotNull DataContext context, @NotNull Command cmd) {
-        VimPlugin.getChange().processEscape(InjectedLanguageUtil.getTopLevelEditor(editor), context);
+      @Override
+      protected boolean execute(@NotNull Editor editor, @NotNull DataContext context, @NotNull Command cmd) {
+        VimPlugin.getChange().processEscape(editor, context);
         return true;
       }
     });
   }
-
+  
   @NotNull
   @Override
   public Set<MappingMode> getMappingModes() {

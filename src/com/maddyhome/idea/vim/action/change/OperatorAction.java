@@ -49,8 +49,9 @@ public class OperatorAction extends VimCommandAction {
           if (argument != null) {
             final Command motion = argument.getMotion();
             if (motion != null) {
-              final TextRange range = MotionGroup.getMotionRange(editor, context, cmd.getCount(), cmd.getRawCount(),
-                                                                 argument, true);
+              final TextRange range = MotionGroup
+                .getMotionRange(editor, editor.getCaretModel().getPrimaryCaret(), context, cmd.getCount(),
+                                cmd.getRawCount(), argument, true);
               if (range != null) {
                 VimPlugin.getMark().setChangeMarks(editor, range);
                 final SelectionType selectionType = SelectionType.fromCommandFlags(motion.getFlags());
@@ -82,7 +83,7 @@ public class OperatorAction extends VimCommandAction {
   @NotNull
   @Override
   public Command.Type getType() {
-    return Command.Type.OTHER_READ_WRITE;
+    return Command.Type.OTHER_SELF_SYNCHRONIZED;
   }
 
   @NotNull

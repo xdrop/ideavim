@@ -18,26 +18,34 @@
 
 package com.maddyhome.idea.vim.helper;
 
-import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.application.options.CodeStyle;
+import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.editor.*;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.FileEditorManager;
+import com.intellij.openapi.fileTypes.FileType;
+import com.intellij.openapi.fileTypes.FileTypeManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.psi.codeStyle.CodeStyleSettings;
 import com.maddyhome.idea.vim.common.CharacterPosition;
 import com.maddyhome.idea.vim.common.TextRange;
+import com.maddyhome.idea.vim.handler.CaretOrder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
 import java.nio.CharBuffer;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * This is a set of helper methods for working with editors. All line and column values are zero based.
  */
 public class EditorHelper {
-  private static final Logger logger = Logger.getInstance(EditorHelper.class.getName());
-
   public static int getVisualLineAtTopOfScreen(@NotNull final Editor editor) {
     int lh = editor.getLineHeight();
     return (editor.getScrollingModel().getVerticalScrollOffset() + lh - 1) / lh;
@@ -485,7 +493,7 @@ public class EditorHelper {
     return editor.getDocument().getLineEndOffset(pos.line);
   }
 
-  public static int getLineCharCount(@NotNull final Editor editor, final int line) {
+  private static int getLineCharCount(@NotNull final Editor editor, final int line) {
     return getLineEndOffset(editor, line, true) - getLineStartOffset(editor, line);
   }
 
@@ -521,7 +529,7 @@ public class EditorHelper {
   public static boolean isLineEmpty(@NotNull final Editor editor, final int line, final boolean allowBlanks) {
     CharSequence chars = editor.getDocument().getCharsSequence();
     int offset = getLineStartOffset(editor, line);
-    if (chars.charAt(offset) == '\n') {
+    if (offset >= chars.length() || chars.charAt(offset) == '\n') {
       return true;
     }
     else if (allowBlanks) {
@@ -539,28 +547,46 @@ public class EditorHelper {
   }
 
   @NotNull
-  public static String pad(@NotNull final Editor editor, int line, final int to) {
-    StringBuilder res = new StringBuilder();
+  public static String pad(@NotNull final Editor editor, @NotNull DataContext context, int line, final int to) {
+    final int len = getLineLength(editor, line);
+    if(len >= to) return "";
 
-    int len = getLineLength(editor, line);
-    if (logger.isDebugEnabled()) {
-      logger.debug("line=" + line);
-      logger.debug("len=" + len);
-      logger.debug("to=" + to);
-    }
-    if (len < to) {
-      // TODO - use tabs as needed
-      for (int i = len; i < to; i++) {
-        res.append(' ');
+    final VirtualFile virtualFile = EditorData.getVirtualFile(editor);
+    final Project project = PlatformDataKeys.PROJECT.getData(context);
+    final int limit = to - len;
+    if (virtualFile != null) {
+      final FileType fileType = FileTypeManager.getInstance().getFileTypeByFile(virtualFile);
+      final CodeStyleSettings settings = project == null ? CodeStyle.getDefaultSettings() : CodeStyle.getSettings(project);
+      if (settings.useTabCharacter(fileType)) {
+        final int tabSize = settings.getTabSize(fileType);
+        final int tabsCnt = limit / tabSize;
+        final int spacesCnt = limit % tabSize;
+
+        return StringUtil.repeat("\t", tabsCnt) + StringUtil.repeat(" ", spacesCnt);
       }
     }
 
-    return res.toString();
+    return StringUtil.repeat(" ", limit);
   }
 
-  public static boolean canEdit(@NotNull final Project project, @NotNull final Editor editor) {
-    return (editor.getDocument().isWritable() ||
-            FileDocumentManager.fileForDocumentCheckedOutSuccessfully(editor.getDocument(), project)) &&
-           !EditorData.isConsoleOutput(editor);
+  /**
+   * Get list of all carets from the editor.
+   *
+   * @param editor The editor from which the carets are taken
+   * @param order  Order in which the carets are given.
+   */
+  @NotNull
+  public static List<Caret> getOrderedCaretsList(@NotNull Editor editor, @NotNull CaretOrder order) {
+    @NotNull List<Caret> carets = editor.getCaretModel().getAllCarets();
+
+    if (order == CaretOrder.INCREASING_OFFSET) {
+      carets.sort(Comparator.comparingInt(Caret::getOffset));
+    }
+    else if (order == CaretOrder.DECREASING_OFFSET) {
+      carets.sort(Comparator.comparingInt(Caret::getOffset));
+      Collections.reverse(carets);
+    }
+
+    return carets;
   }
 }

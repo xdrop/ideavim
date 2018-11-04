@@ -25,17 +25,22 @@ import com.maddyhome.idea.vim.action.motion.MotionEditorAction;
 import com.maddyhome.idea.vim.command.Argument;
 import com.maddyhome.idea.vim.handler.MotionEditorActionHandler;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  */
 public class MotionGotoFileMarkAction extends MotionEditorAction {
   public MotionGotoFileMarkAction() {
-    super(new Handler());
+    super(new MotionEditorActionHandler() {
+      @Override
+      public int getOffset(@NotNull Editor editor, @NotNull DataContext context, int count, int rawCount,
+                           @Nullable Argument argument) {
+        if (argument == null) return -1;
+
+        final char mark = argument.getCharacter();
+        return VimPlugin.getMotion().moveCaretToFileMark(editor, mark, false);
+      }
+    });
   }
 
-  private static class Handler extends MotionEditorActionHandler {
-    public int getOffset(@NotNull Editor editor, DataContext context, int count, int rawCount, @NotNull Argument argument) {
-      return VimPlugin.getMotion().moveCaretToFileMark(editor, argument.getCharacter());
-    }
-  }
 }

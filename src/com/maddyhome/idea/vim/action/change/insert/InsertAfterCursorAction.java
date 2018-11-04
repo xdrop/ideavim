@@ -31,14 +31,16 @@ import org.jetbrains.annotations.Nullable;
  */
 public class InsertAfterCursorAction extends EditorAction {
   public InsertAfterCursorAction() {
-    super(new Handler());
-  }
-
-  private static class Handler extends ChangeEditorActionHandler {
-    public boolean execute(@NotNull Editor editor, @NotNull DataContext context, int count, int rawCount, @Nullable Argument argument) {
-      VimPlugin.getChange().insertAfterCursor(editor, context);
-
-      return true;
-    }
+    super(new ChangeEditorActionHandler() {
+      @Override
+      public boolean execute(@NotNull Editor editor,
+                             @NotNull DataContext context,
+                             int count,
+                             int rawCount,
+                             @Nullable Argument argument) {
+        VimPlugin.getChange().insertAfterCursor(editor, context);
+        return true;
+      }
+    });
   }
 }

@@ -38,9 +38,12 @@ import java.util.Set;
 public class VisualBlockAppendAction extends VimCommandAction {
   public VisualBlockAppendAction() {
     super(new VisualOperatorActionHandler() {
-      protected boolean execute(@NotNull Editor editor, @NotNull DataContext context, @NotNull Command cmd,
+      protected boolean execute(@NotNull Editor editor,
+                                @NotNull DataContext context,
+                                @NotNull Command cmd,
                                 @NotNull TextRange range) {
-        return !editor.isOneLineMode() && VimPlugin.getChange().blockInsert(editor, context, range, true);
+        if (editor.isOneLineMode()) return false;
+        return VimPlugin.getChange().blockInsert(editor, context, range, true);
       }
     });
   }

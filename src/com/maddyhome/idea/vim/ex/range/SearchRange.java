@@ -20,6 +20,7 @@ package com.maddyhome.idea.vim.ex.range;
 
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Editor;
 import com.maddyhome.idea.vim.VimPlugin;
 import com.maddyhome.idea.vim.command.Command;
@@ -58,31 +59,33 @@ public class SearchRange extends AbstractRange {
     StringTokenizer tok = new StringTokenizer(pattern, "\u0000");
     while (tok.hasMoreTokens()) {
       String pat = tok.nextToken();
-      if (pat.equals("\\/")) {
-        patterns.add(VimPlugin.getSearch().getLastSearch());
-        flags.add(Command.FLAG_SEARCH_FWD);
-      }
-      else if (pat.equals("\\?")) {
-        patterns.add(VimPlugin.getSearch().getLastSearch());
-        flags.add(Command.FLAG_SEARCH_REV);
-      }
-      else if (pat.equals("\\&")) {
-        patterns.add(VimPlugin.getSearch().getLastPattern());
-        flags.add(Command.FLAG_SEARCH_FWD);
-      }
-      else {
-        if (pat.charAt(0) == '/') {
+      switch (pat) {
+        case "\\/":
+          patterns.add(VimPlugin.getSearch().getLastSearch());
           flags.add(Command.FLAG_SEARCH_FWD);
-        }
-        else {
+          break;
+        case "\\?":
+          patterns.add(VimPlugin.getSearch().getLastSearch());
           flags.add(Command.FLAG_SEARCH_REV);
-        }
+          break;
+        case "\\&":
+          patterns.add(VimPlugin.getSearch().getLastPattern());
+          flags.add(Command.FLAG_SEARCH_FWD);
+          break;
+        default:
+          if (pat.charAt(0) == '/') {
+            flags.add(Command.FLAG_SEARCH_FWD);
+          }
+          else {
+            flags.add(Command.FLAG_SEARCH_REV);
+          }
 
-        pat = pat.substring(1);
-        if (pat.charAt(pat.length() - 1) == pat.charAt(0)) {
-          pat = pat.substring(0, pat.length() - 1);
-        }
-        patterns.add(pat);
+          pat = pat.substring(1);
+          if (pat.charAt(pat.length() - 1) == pat.charAt(0)) {
+            pat = pat.substring(0, pat.length() - 1);
+          }
+          patterns.add(pat);
+          break;
       }
     }
   }
@@ -126,14 +129,42 @@ public class SearchRange extends AbstractRange {
     }
   }
 
+  @Override
+  protected int getRangeLine(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context,
+                             boolean lastZero) {
+    int line = caret.getLogicalPosition().line;
+    int offset = -1;
+    for (int i = 0; i < patterns.size(); i++) {
+      final String pattern = patterns.get(i);
+      final int flag = flags.get(i);
+
+      offset = VimPlugin.getSearch().search(editor, pattern, getSearchOffset(editor, line, flag, lastZero), 1, flag);
+      if (offset == -1) break;
+
+      line = editor.offsetToLogicalPosition(offset).line;
+    }
+
+    return offset != -1 ? line : -1;
+  }
+
+  private int getSearchOffset(@NotNull Editor editor, int line, int flag, boolean lastZero) {
+    if ((flag & Command.FLAG_SEARCH_FWD) != 0 && !lastZero) {
+      return VimPlugin.getMotion().moveCaretToLineEnd(editor, line, true);
+    }
+
+    return VimPlugin.getMotion().moveCaretToLineStart(editor, line);
+  }
+
   @NotNull
   public String toString() {
 
     return "SearchRange[" + "patterns=" + patterns + ", " + super.toString() + "]";
   }
 
-  @NotNull private final List<String> patterns = new ArrayList<String>();
-  @NotNull private final List<Integer> flags = new ArrayList<Integer>();
+  @NotNull
+  private final List<String> patterns = new ArrayList<>();
+  @NotNull
+  private final List<Integer> flags = new ArrayList<>();
 
   private static final Logger logger = Logger.getInstance(SearchRange.class.getName());
 }

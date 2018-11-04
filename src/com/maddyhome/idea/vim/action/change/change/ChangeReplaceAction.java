@@ -31,12 +31,16 @@ import org.jetbrains.annotations.Nullable;
  */
 public class ChangeReplaceAction extends EditorAction {
   public ChangeReplaceAction() {
-    super(new Handler());
-  }
-
-  private static class Handler extends ChangeEditorActionHandler {
-    public boolean execute(@NotNull Editor editor, @NotNull DataContext context, int count, int rawCount, @Nullable Argument argument) {
-      return VimPlugin.getChange().changeReplace(editor, context);
-    }
+    super(new ChangeEditorActionHandler() {
+      @Override
+      public boolean execute(@NotNull Editor editor,
+                             @NotNull DataContext context,
+                             int count,
+                             int rawCount,
+                             @Nullable Argument argument) {
+        VimPlugin.getChange().changeReplace(editor, context);
+        return true;
+      }
+    });
   }
 }

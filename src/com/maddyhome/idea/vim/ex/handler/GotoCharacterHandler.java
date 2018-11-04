@@ -19,12 +19,15 @@
 package com.maddyhome.idea.vim.ex.handler;
 
 import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Editor;
 import com.maddyhome.idea.vim.VimPlugin;
 import com.maddyhome.idea.vim.command.Command;
 import com.maddyhome.idea.vim.ex.CommandHandler;
 import com.maddyhome.idea.vim.ex.ExCommand;
+import com.maddyhome.idea.vim.ex.ExException;
 import com.maddyhome.idea.vim.group.MotionGroup;
+import com.maddyhome.idea.vim.handler.CaretOrder;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -32,21 +35,21 @@ import org.jetbrains.annotations.NotNull;
  */
 public class GotoCharacterHandler extends CommandHandler {
   public GotoCharacterHandler() {
-    super("go", "to", RANGE_OPTIONAL | ARGUMENT_OPTIONAL | RANGE_IS_COUNT, Command.FLAG_MOT_EXCLUSIVE);
+    super("go", "to", RANGE_OPTIONAL | ARGUMENT_OPTIONAL | RANGE_IS_COUNT, Command.FLAG_MOT_EXCLUSIVE, true,
+          CaretOrder.DECREASING_OFFSET);
   }
 
-  public boolean execute(@NotNull Editor editor, @NotNull DataContext context, @NotNull ExCommand cmd) {
-    int count = cmd.getCount(editor, context, 1, true);
+  @Override
+  public boolean execute(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context,
+                         @NotNull ExCommand cmd) throws ExException {
+    final int count = cmd.getCount(editor, caret, context, 1, true);
+    if (count <= 0) return false;
 
-    if (count > 0) {
-      int res = VimPlugin.getMotion().moveCaretToNthCharacter(editor, count - 1);
-      if (res != -1) {
-        MotionGroup.moveCaret(editor, res);
+    final int offset = VimPlugin.getMotion().moveCaretToNthCharacter(editor, count - 1);
+    if (offset == -1) return false;
 
-        return true;
-      }
-    }
+    MotionGroup.moveCaret(editor, caret, offset);
 
-    return false;
+    return true;
   }
 }

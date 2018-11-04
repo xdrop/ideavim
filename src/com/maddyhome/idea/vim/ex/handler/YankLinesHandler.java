@@ -19,14 +19,22 @@
 package com.maddyhome.idea.vim.ex.handler;
 
 import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.editor.Caret;
+import com.intellij.openapi.editor.CaretModel;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.util.ArrayUtil;
 import com.maddyhome.idea.vim.VimPlugin;
 import com.maddyhome.idea.vim.command.SelectionType;
 import com.maddyhome.idea.vim.common.TextRange;
 import com.maddyhome.idea.vim.ex.CommandHandler;
 import com.maddyhome.idea.vim.ex.ExCommand;
 import com.maddyhome.idea.vim.ex.ExException;
+import com.maddyhome.idea.vim.group.RegisterGroup;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
+
+import static com.google.common.collect.Lists.newArrayListWithCapacity;
 
 /**
  *
@@ -36,21 +44,32 @@ public class YankLinesHandler extends CommandHandler {
     super("y", "ank", RANGE_OPTIONAL | ARGUMENT_OPTIONAL);
   }
 
-  public boolean execute(@NotNull Editor editor, @NotNull DataContext context, @NotNull ExCommand cmd) throws ExException {
-    StringBuilder arg = new StringBuilder(cmd.getArgument());
-    char register = VimPlugin.getRegister().getDefaultRegister();
-    if (arg.length() > 0 && (arg.charAt(0) < '0' || arg.charAt(0) > '9')) {
-      register = arg.charAt(0);
-      arg.deleteCharAt(0);
-      cmd.setArgument(arg.toString());
+  public boolean execute(@NotNull Editor editor, @NotNull DataContext context,
+                         @NotNull ExCommand cmd) throws ExException {
+    final String argument = cmd.getArgument();
+    final RegisterGroup registerGroup = VimPlugin.getRegister();
+    final char register;
+    if (argument.length() > 0 && !Character.isDigit(argument.charAt(0))) {
+      register = argument.charAt(0);
+      cmd.setArgument(argument.substring(1));
+    }
+    else {
+      register = registerGroup.getDefaultRegister();
     }
 
-    if (!VimPlugin.getRegister().selectRegister(register)) {
-      return false;
+    if (!registerGroup.selectRegister(register)) return false;
+
+    final CaretModel caretModel = editor.getCaretModel();
+    final List<Integer> starts = newArrayListWithCapacity(caretModel.getCaretCount());
+    final List<Integer> ends = newArrayListWithCapacity(caretModel.getCaretCount());
+    for (Caret caret : caretModel.getAllCarets()) {
+      final TextRange range = cmd.getTextRange(editor, caret, context, true);
+      starts.add(range.getStartOffset());
+      ends.add(range.getEndOffset() - 1);
     }
 
-    TextRange range = cmd.getTextRange(editor, context, true);
-
-    return VimPlugin.getCopy().yankRange(editor, range, SelectionType.LINE_WISE, false);
+    return VimPlugin.getCopy().yankRange(editor,
+                                         new TextRange(ArrayUtil.toIntArray(starts), ArrayUtil.toIntArray(ends)),
+                                         SelectionType.LINE_WISE, false);
   }
 }

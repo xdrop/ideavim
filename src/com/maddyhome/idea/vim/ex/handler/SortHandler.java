@@ -19,10 +19,12 @@
 package com.maddyhome.idea.vim.ex.handler;
 
 import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.SelectionModel;
 import com.intellij.openapi.util.text.StringUtil;
 import com.maddyhome.idea.vim.VimPlugin;
+import com.maddyhome.idea.vim.command.CommandState;
 import com.maddyhome.idea.vim.ex.CommandHandler;
 import com.maddyhome.idea.vim.ex.ExCommand;
 import com.maddyhome.idea.vim.ex.ExException;
@@ -49,15 +51,31 @@ public class SortHandler extends CommandHandler {
     final boolean ignoreCase = nonEmptyArg && arg.contains("i");
     final boolean number = nonEmptyArg && arg.contains("n");
 
-    final LineRange range = getLineRange(editor, context, cmd);
     final Comparator<String> lineComparator = new LineComparator(ignoreCase, number, reverse);
+    if (CommandState.getInstance(editor).getSubMode() == CommandState.SubMode.VISUAL_BLOCK) {
+      final Caret primaryCaret = editor.getCaretModel().getPrimaryCaret();
+      final LineRange range = getLineRange(editor, primaryCaret, context, cmd);
+      final boolean worked = VimPlugin.getChange().sortRange(editor, range, lineComparator);
+      primaryCaret.moveToOffset(VimPlugin.getMotion().moveCaretToLineStartSkipLeading(editor, range.getStartLine()));
+      return worked;
+    }
 
-    return VimPlugin.getChange().sortRange(editor, range, lineComparator);
+    boolean worked = true;
+    for (Caret caret : editor.getCaretModel().getAllCarets()) {
+      final LineRange range = getLineRange(editor, caret, context, cmd);
+      if (!VimPlugin.getChange().sortRange(editor, range, lineComparator)) {
+        worked = false;
+      }
+      caret.moveToOffset(VimPlugin.getMotion().moveCaretToLineStartSkipLeading(editor, range.getStartLine()));
+    }
+
+    return worked;
   }
 
   @NotNull
-  private LineRange getLineRange(@NotNull Editor editor, @NotNull DataContext context, @NotNull ExCommand cmd) {
-    final LineRange range = cmd.getLineRange(editor, context);
+  private LineRange getLineRange(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context,
+                                 @NotNull ExCommand cmd) {
+    final LineRange range = cmd.getLineRange(editor, caret, context);
     final LineRange normalizedRange;
 
     // Something like "30,20sort" gets converted to "20,30sort"

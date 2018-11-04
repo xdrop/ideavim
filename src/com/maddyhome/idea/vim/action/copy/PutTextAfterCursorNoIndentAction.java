@@ -31,12 +31,15 @@ import org.jetbrains.annotations.Nullable;
  */
 public class PutTextAfterCursorNoIndentAction extends EditorAction {
   public PutTextAfterCursorNoIndentAction() {
-    super(new Handler());
-  }
-
-  private static class Handler extends ChangeEditorActionHandler {
-    public boolean execute(@NotNull Editor editor, @NotNull DataContext context, int count, int rawCount, @Nullable Argument argument) {
-      return VimPlugin.getCopy().putTextAfterCursor(editor, context, count, false, false);
-    }
+    super(new ChangeEditorActionHandler() {
+      @Override
+      public boolean execute(@NotNull Editor editor,
+                             @NotNull DataContext context,
+                             int count,
+                             int rawCount,
+                             @Nullable Argument argument) {
+        return VimPlugin.getCopy().putText(editor, context, count, false, false, false);
+      }
+    });
   }
 }

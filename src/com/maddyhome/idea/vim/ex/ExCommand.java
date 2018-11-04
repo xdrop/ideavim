@@ -19,10 +19,15 @@
 package com.maddyhome.idea.vim.ex;
 
 import com.intellij.openapi.actionSystem.DataContext;
-import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Editor;
 import com.maddyhome.idea.vim.common.TextRange;
+import com.maddyhome.idea.vim.handler.CaretOrder;
+import com.maddyhome.idea.vim.helper.EditorHelper;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -36,6 +41,20 @@ public class ExCommand {
 
   public int getLine(@NotNull Editor editor, DataContext context) {
     return ranges.getLine(editor, context);
+  }
+
+  public int getLine(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context) {
+    return ranges.getLine(editor, caret, context);
+  }
+
+  public List<Integer> getOrderedLines(@NotNull Editor editor, @NotNull DataContext context,
+                                       @NotNull CaretOrder caretOrder) {
+    final ArrayList<Integer> lines = new ArrayList<>(editor.getCaretModel().getCaretCount());
+    for (Caret caret : EditorHelper.getOrderedCaretsList(editor, caretOrder)) {
+      final int line = getLine(editor, caret, context);
+      lines.add(line);
+    }
+    return lines;
   }
 
   public int getCount(@NotNull Editor editor, DataContext context, int defaultCount, boolean checkCount) {
@@ -52,9 +71,20 @@ public class ExCommand {
     return res;
   }
 
+  public int getCount(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context, int defaultCount,
+                      boolean checkCount) {
+    final int count = ranges.getCount(editor, caret, context, checkCount ? getCountArgument() : -1);
+    if (count == -1) return defaultCount;
+    return count;
+  }
+
   @NotNull
   public LineRange getLineRange(@NotNull Editor editor, DataContext context) {
     return ranges.getLineRange(editor, context, -1);
+  }
+
+  public LineRange getLineRange(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context) {
+    return ranges.getLineRange(editor, caret, context, -1);
   }
 
   @NotNull
@@ -67,7 +97,12 @@ public class ExCommand {
     return ranges.getTextRange(editor, context, count);
   }
 
-  protected int getCountArgument() {
+  public TextRange getTextRange(@NotNull Editor editor, @NotNull Caret caret, @NotNull DataContext context,
+                                boolean checkCount) {
+    return ranges.getTextRange(editor, caret, context, checkCount ? getCountArgument() : -1);
+  }
+
+  private int getCountArgument() {
     try {
       return Integer.parseInt(argument);
     }
@@ -95,9 +130,10 @@ public class ExCommand {
     return ranges;
   }
 
-  @NotNull private final Ranges ranges;
-  @NotNull private final String command;
-  @NotNull private String argument;
-
-  private static Logger logger = Logger.getInstance(ExCommand.class.getName());
+  @NotNull
+  private final Ranges ranges;
+  @NotNull
+  private final String command;
+  @NotNull
+  private String argument;
 }

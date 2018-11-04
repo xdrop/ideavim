@@ -19,14 +19,18 @@
 package com.maddyhome.idea.vim.ex.handler;
 
 import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Editor;
 import com.maddyhome.idea.vim.VimPlugin;
 import com.maddyhome.idea.vim.command.CommandState;
 import com.maddyhome.idea.vim.command.SelectionType;
 import com.maddyhome.idea.vim.common.TextRange;
 import com.maddyhome.idea.vim.ex.*;
+import com.maddyhome.idea.vim.handler.CaretOrder;
 import com.maddyhome.idea.vim.helper.EditorHelper;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
 
 /**
  *
@@ -39,16 +43,21 @@ public class CopyTextHandler extends CommandHandler {
     }, RANGE_OPTIONAL | ARGUMENT_REQUIRED | WRITABLE);
   }
 
-  public boolean execute(@NotNull Editor editor, @NotNull DataContext context, @NotNull ExCommand cmd) throws ExException {
-    TextRange range = cmd.getTextRange(editor, context, false);
+  @Override
+  public boolean execute(@NotNull Editor editor, @NotNull DataContext context,
+                         @NotNull ExCommand cmd) throws ExException {
+    final List<Caret> carets = EditorHelper.getOrderedCaretsList(editor, CaretOrder.DECREASING_OFFSET);
+    for (Caret caret : carets) {
+      final TextRange range = cmd.getTextRange(editor, caret, context, false);
+      final String text = EditorHelper.getText(editor, range.getStartOffset(), range.getEndOffset());
 
-    final ExCommand argumentCmd = CommandParser.getInstance().parse(cmd.getArgument());
-    int line = argumentCmd.getRanges().getFirstLine(editor, context);
-    int offset = VimPlugin.getMotion().moveCaretToLineStart(editor, line + 1);
+      final ExCommand arg = CommandParser.getInstance().parse(cmd.getArgument());
+      final int line = arg.getRanges().getFirstLine(editor, caret, context);
+      final int offset = VimPlugin.getMotion().moveCaretToLineStart(editor, line + 1);
 
-    String text = EditorHelper.getText(editor, range.getStartOffset(), range.getEndOffset());
-    VimPlugin.getCopy().putText(editor, context, offset, text, SelectionType.LINE_WISE, 1, true,
-                                                  false, CommandState.SubMode.NONE);
+      VimPlugin.getCopy().putText(editor, caret, context, text, SelectionType.LINE_WISE, CommandState.SubMode.NONE,
+                                  offset, 1, true, false);
+    }
 
     return true;
   }

@@ -21,21 +21,26 @@ package com.maddyhome.idea.vim.action.change.insert;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.actionSystem.EditorAction;
-import com.intellij.openapi.editor.actionSystem.EditorActionHandler;
-import com.intellij.psi.impl.source.tree.injected.InjectedLanguageUtil;
 import com.maddyhome.idea.vim.VimPlugin;
+import com.maddyhome.idea.vim.command.Argument;
+import com.maddyhome.idea.vim.handler.ChangeEditorActionHandler;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  */
 public class InsertPreviousInsertAction extends EditorAction {
   public InsertPreviousInsertAction() {
-    super(new Handler());
-  }
-
-  private static class Handler extends EditorActionHandler {
-    public void execute(@NotNull Editor editor, @NotNull DataContext context) {
-      VimPlugin.getChange().insertPreviousInsert(InjectedLanguageUtil.getTopLevelEditor(editor), context, false);
-    }
+    super(new ChangeEditorActionHandler() {
+      @Override
+      public boolean execute(@NotNull Editor editor,
+                             @NotNull DataContext context,
+                             int count,
+                             int rawCount,
+                             @Nullable Argument argument) {
+        VimPlugin.getChange().insertPreviousInsert(editor, context, false);
+        return true;
+      }
+    });
   }
 }

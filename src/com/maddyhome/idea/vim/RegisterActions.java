@@ -515,10 +515,10 @@ public class RegisterActions {
                           new Shortcut("gp"));
     parser.registerAction(MappingMode.N, "VimCopyPutTextBeforeCursorNoIndent", Command.Type.PASTE, new Shortcut[]{
       new Shortcut("[P"),
-      new Shortcut("]P")
+      new Shortcut("]P"),
+      new Shortcut("[p")
     });
     parser.registerAction(MappingMode.N, "VimCopyPutTextAfterCursorNoIndent", Command.Type.PASTE, new Shortcut[]{
-      new Shortcut("[p"),
       new Shortcut("]p")
     });
     parser.registerAction(MappingMode.N, "VimCopyYankLine", Command.Type.COPY,
@@ -614,9 +614,9 @@ public class RegisterActions {
                           new Shortcut("@:"));
     parser.registerAction(MappingMode.N, "QuickJavaDoc", Command.Type.OTHER_READONLY,
                           new Shortcut('K'));
-    parser.registerAction(MappingMode.N, "VimRedo", Command.Type.OTHER_WRITABLE,
+    parser.registerAction(MappingMode.N, "VimRedo", Command.Type.OTHER_SELF_SYNCHRONIZED,
                           new Shortcut(KeyStroke.getKeyStroke(KeyEvent.VK_R, KeyEvent.CTRL_MASK)));
-    parser.registerAction(MappingMode.N, "VimUndo", Command.Type.OTHER_WRITABLE, new Shortcut[]{
+    parser.registerAction(MappingMode.N, "VimUndo", Command.Type.OTHER_SELF_SYNCHRONIZED, new Shortcut[]{
       new Shortcut('u'),
       new Shortcut(KeyStroke.getKeyStroke(KeyEvent.VK_UNDO, 0))
     });

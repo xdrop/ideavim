@@ -15,8 +15,8 @@ IdeaVim
 </div>
 
 <div>
-  <a href="http://teamcity.jetbrains.com/viewType.html?buildTypeId=IdeaVim_TestsForIntelliJ20172&guest=1">
-    <img src="http://teamcity.jetbrains.com/app/rest/builds/buildType:(id:IdeaVim_TestsForIntelliJ20172)/statusIcon.svg?guest=1"/>
+  <a href="http://teamcity.jetbrains.com/viewType.html?buildTypeId=IdeaVim_TestsForIntelliJ20182&guest=1">
+    <img src="http://teamcity.jetbrains.com/app/rest/builds/buildType:(id:IdeaVim_TestsForIntelliJ20182)/statusIcon.svg?guest=1"/>
   </a>
   <span>Tests</span>
 </div>
@@ -46,8 +46,8 @@ it is unchecked. At this point your IDE will work with its regular keyboard
 shortcuts.
 
 Keyboard shortcut conflicts between the Vim emulation and the IDE can be
-resolved via "File | Settings | Vim Emulation", "File | Settings | Keymap" on
-Linux & Windows, and by "Preferences | Other Settings | Vim Emulation",
+resolved via "File | Settings | Editor | Vim Emulation", "File | Settings |
+Keymap" on Linux & Windows, and by "Preferences | Editor | Vim Emulation",
 "Preferences | Keymap" on macOS. They can also be resolved by key mapping
 commands in your ~/.ideavimrc file.
 
@@ -93,6 +93,7 @@ Emulated Vim plugins:
 
 * vim-surround
 * argtextobj.vim
+* vim-multiple-cursors
 
 Not supported (yet):
 
@@ -101,7 +102,7 @@ Not supported (yet):
 
 See also:
 
-* [List of recently added commands](src/com/maddyhome/idea/vim/package-info.java)
+* [The list of all supported commands](src/com/maddyhome/idea/vim/package-info.java)
 * [Top features and bugs](http://youtrack.jetbrains.com/issues/VIM?q=%23Unresolved+sort+by%3A+votes)
 
 
@@ -138,6 +139,9 @@ Available extensions:
 * surround
     * Emulates [vim-surround](https://github.com/tpope/vim-surround)
     * Commands: `ys`, `cs`, `ds`, `S`
+* multiple-cursors
+    * Emulates [vim-multiple-cursors](https://github.com/terryma/vim-multiple-cursors)
+    * Commands: `<A-n>`, `<A-x>`, `<A-p>`, `g<A-n>`
 
 * argtextobj
     * Emulates [argtextobj.vim](https://vim.sourceforge.io/scripts/script.php?script_id=2699)
@@ -200,7 +204,7 @@ in the issue tracker.
 
 1. Fork IdeaVim on GitHub and clone the repository on your local machine.
 
-2. Import the project from existing sources in IntelliJ IDEA 2017.1+ (Community or
+2. Import the project from existing sources in IntelliJ IDEA 2018.1 or newer (Community or
    Ultimate) using "File | New | Project from Existing Sources..." or "Import
    Project" from the start window.
 
